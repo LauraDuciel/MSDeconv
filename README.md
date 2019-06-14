@@ -23,7 +23,7 @@ This folder contains the jupyter notebooks and code to reproduce the figures in 
 It requires in addition:
 
 - Spike (Public library): pip install spike-py
-- Isotope available at: 
+- Isotope available at: https://bitbucket.org/delsuc/isotope
 
 ### Acknowledgements
 
