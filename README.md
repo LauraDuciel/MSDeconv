@@ -1,14 +1,20 @@
 
 *This Program is provided under the Licence CeCILL 2.1*
 
-    Authors : Laura Duciel, Afef Cherni, Marc-André Delsuc (madelsuc@unistra.fr)
+    Authors : Laura Duciel^a^, Afef Cherni^b^, Marc-André Delsuc^a^ (madelsuc@unistra.fr)
 	Date : June 2019
+
+*
+a. CASC4DE, Strasbourg, France; IGBMC, Université de Strasbourg, Illkirch, France
+
+b. i2m, CMI, Aix-Marseille University, France
+*
 
 *This document is associated to the manuscript*
 
 **Deconvolution of isotopic pattern in 2D-FTICR MS Spectrometry of peptides and proteins**
 
-*Laura Duciel Afef Cherni and Marc-André Delsuc¨*
+*Laura Duciel Afef Cherni and Marc-André Delsuc*
 
 ## Abstract
 Mass Spectrometry (MS) is a largely used analytical technique in biology with applications such as the determination of molecule masses or the elucidation of structural data. 
