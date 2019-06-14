@@ -5,8 +5,9 @@ Authors : Laura Duciel<sup>a</sup>, Afef Cherni<sup>b</sup>, Marc-André Delsuc<
 
 Date : June 2019
 
-*a. CASC4DE, Strasbourg, France; IGBMC, Université de Strasbourg, Illkirch, France
-b. i2m, CMI, Aix-Marseille University, France*
+*a. CASC4DE, Strasbourg, France; IGBMC, Université de Strasbourg, Illkirch, France*
+
+*b. i2m, CMI, Aix-Marseille University, France*
 
 *This document is associated to the manuscript*
 
