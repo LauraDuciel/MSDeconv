@@ -1,7 +1,7 @@
 
 *This Program is provided under the Licence CeCILL 2.1*
 
-Authors : Laura Duciel^a^, Afef Cherni^b^, Marc-André Delsuc^a^ (madelsuc@unistra.fr)
+Authors : Laura Duciel^(a), Afef Cherni^(b), Marc-André Delsuc^(a) (madelsuc@unistra.fr)
 
 Date : June 2019
 
