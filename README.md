@@ -1,14 +1,12 @@
 
 *This Program is provided under the Licence CeCILL 2.1*
 
-    Authors : Laura Duciel^a^, Afef Cherni^b^, Marc-André Delsuc^a^ (madelsuc@unistra.fr)
-	Date : June 2019
+Authors : Laura Duciel^a^, Afef Cherni^b^, Marc-André Delsuc^a^ (madelsuc@unistra.fr)
 
-*
-a. CASC4DE, Strasbourg, France; IGBMC, Université de Strasbourg, Illkirch, France
+Date : June 2019
 
-b. i2m, CMI, Aix-Marseille University, France
-*
+*a. CASC4DE, Strasbourg, France; IGBMC, Université de Strasbourg, Illkirch, France
+b. i2m, CMI, Aix-Marseille University, France*
 
 *This document is associated to the manuscript*
 
