@@ -261,68 +261,42 @@ def multi_analysis(d, zones, iterations=100, axeZ1=[1,2],axeZ2=[1,2],width1=1.0,
                             widthF2] 
     return 
 
-def complete_deconv(d, prefix="TEST",lowmassX=300, lowmassY=400, highmassX=1200, highmassY=700, iterations=100, axeZ1=[1,2],axeZ2=[1,2],dm1_m2=3.4E-6,dm2_m2=1.0E-7, save=True,noisefactor=0.9, NX=1.5*1024, NY=256):
+def safezoom(zoom,k,lowmassX,lowmassY,highmassX,highmassY):
     """
-    To analyze in 'one time' all pieces of the spectrum in the indicated zone.
-    d is the imported data-set.
-    lowmassX=lowmassX, lowmassY=lowmassY, highmassX=highmassX, highmassY=highmassY are 4 coordinates to limit the part to analyze in the full spectrum.
-
-    create chunks, determine widths and loop analysis() over chunks.
-    if save is True, store the resulting analysis in a hdf5 file, else it does not save anything.
+    Computes zoom in points and in m/z units (returns a tuple). 
+    Checking that they are inside lowmass and highmass values and adding a safety border (in order that each zone covers part of neighboors) of k m/z.
     """
-    d.pks={}
-    d.axeZ1 = axeZ1
-    d.axeZ2 = axeZ2
-    dirName = "{0}_DeconvResults".format(prefix)
-    if not os.path.exists(dirName):
-        os.mkdir(dirName)
-    Tabl = pieceofdata(d, NX=NX, NY=NY, lowmassX=lowmassX, lowmassY=lowmassY, highmassX=highmassX, highmassY=highmassY)
-    for N in range(0,len(Tabl)):
-        print("***Chunk ", N+1," over ",len(Tabl),"***")
-        dec.memoize_clear()
-        zoom = Tabl[N]
-        #Adding 2m/z border to the zone
-        zoom_mz = list(isz(d,zoom))
-        k = 2 #size of the safety border in m/z
-        zoom_mz_safe = [zoom_mz[0]+k,zoom_mz[1]-k,zoom_mz[2]+k,zoom_mz[3]-k]
-        mean_m1 = (zoom_mz_safe[0]+zoom_mz_safe[1])/2
-        mean_m2 = (zoom_mz_safe[2]+zoom_mz_safe[3])/2
-        width1 = round(dm1_m2*(mean_m1)**2, 2)
-        width2 = round(dm2_m2*(mean_m2)**2, 2)
-        print("***Obtained widths values: widht1=",width1," width2=", width2,"***")
-        zoom_safe = list(mztoi(d,zoom_mz_safe)) #this is the list of coordinates with the safety border of 2m/z included
-        zoom_safe = [math.ceil((zoom_safe[0]-1) // 2.) * 2,math.ceil((zoom_safe[1]+1) // 2.) * 2,math.ceil((zoom_safe[2]-1) // 2.) * 2,math.ceil((zoom_safe[3]+1) // 2.) * 2] #trick to make sure the limits are even, odd number create a bug with numpy rfft
+    #Adding 2m/z border to the zone
+    zoom_mz = list(isz(d,zoom))
+    k = 2 #size of the safety border in m/z
+    zoom_mz_safe = [zoom_mz[0]+k,zoom_mz[1]-k,zoom_mz[2]+k,zoom_mz[3]-k]
+    mean_m1 = (zoom_mz_safe[0]+zoom_mz_safe[1])/2
+    mean_m2 = (zoom_mz_safe[2]+zoom_mz_safe[3])/2
+    width1 = round(dm1_m2*(mean_m1)**2, 2)
+    width2 = round(dm2_m2*(mean_m2)**2, 2)
+    print("***Obtained widths values: widht1=",width1," width2=", width2,"***")
+    zoom_safe = list(mztoi(d,zoom_mz_safe)) #this is the list of coordinates with the safety border of 2m/z included
+    zoom_safe = [math.ceil((zoom_safe[0]-1) // 2.) * 2,math.ceil((zoom_safe[1]+1) // 2.) * 2,math.ceil((zoom_safe[2]-1) // 2.) * 2,math.ceil((zoom_safe[3]+1) // 2.) * 2] #trick to make sure the limits are even, odd number create a bug with numpy rfft
 #the following is to make sure we do not go bellow the given limits
-        if zoom_safe[0] < math.ceil(d.axis1.mztoi(highmassY) // 2.) * 2:
-            zoom_safe[0] = math.ceil(d.axis1.mztoi(highmassY) // 2.) * 2
-        if zoom_safe[1] > math.ceil(d.axis1.mztoi(lowmassY) // 2.) *2:
-            zoom_safe[1] = math.ceil(d.axis1.mztoi(lowmassY) // 2.) *2 + 2
-        if zoom_safe[2] < math.ceil(d.axis2.mztoi(highmassX) // 2.) * 2:
-            zoom_safe[2] = math.ceil(d.axis2.mztoi(highmassX) // 2.) * 2
-        if zoom_safe[3] > math.ceil(d.axis2.mztoi(lowmassX) // 2.) *2:
-            zoom_safe[3] = math.ceil(d.axis2.mztoi(lowmassX) // 2.) *2 + 2
-        print("*** Currently analyzed zone: ",zoom_safe," in points, i.e. ",zoom_mz_safe," in m/z. ***")
-    # ATTENTION - A FAIRE: definir Z1 et Z2 pour etre sur que parent > fragment
-        d.unit='points'
-        S = analysis(d, zoom_safe, iterations=iterations, axeZ1=d.axeZ1, axeZ2=d.axeZ2, width1=width1,width2=width2,noisefactor=noisefactor)
-        print("Noise: ", S.noise, "Offset:", S.offset, "Khi2:", S.Khi2)
-        if save:
-            fname = "{0}_DeconvResults/_{1}_{2}_{3}_{4}.h5".format(prefix,*zoom_safe) #Allows to store the deconvolution results in compressed HDF5 files.
-            store(fname, S.result)
-        thresh = S.result.max()/100.0 #Definition of the detection threshold - Maybe to optimize. 
-        for z1 in S.axeZ1: #Loop over the Z values. (Z values being the charges of ions)
-            for z2 in S.axeZ2:
-                listpkF1, listpkF2, listint = pp(S,z1-1,z2-1,threshold = thresh)
-                print("*** Z1, Z2, Nb peaks: ",z1-1,z2-1,len(listpkF1),"***")
-                listpkF1bis,listpkF2bis,listintbis,widthF1,widthF2 = centroid2D_OnDeconvoluted(S,z1-1,z2-1,listpkF1, listpkF2, listint)
-                d.pks["Peaks_Zone{0}{1}{2}{3}_Z1{4}_Z2{5}".format(*zoom_safe,z1,z2)]=[listpkF1,
-                                                                                    listpkF2,
-                                                                                    listint,
-                                                                                    [ d.axis1.itomz(p) for p in listpkF1bis], #Convert and store coordinates in mass
-                                                                                    [ d.axis2.itomz(p) for p in listpkF2bis],
-                                                                                    listintbis, #Store intensities
-                                                                                    widthF1, #width values are stored to get an information on precision.
-                                                                                    widthF2] 
+    if zoom_safe[0] < math.ceil(d.axis1.mztoi(highmassY) // 2.) * 2:
+        zoom_safe[0] = math.ceil(d.axis1.mztoi(highmassY) // 2.) * 2
+    if zoom_safe[1] > math.ceil(d.axis1.mztoi(lowmassY) // 2.) *2:
+        zoom_safe[1] = math.ceil(d.axis1.mztoi(lowmassY) // 2.) *2 + 2
+    if zoom_safe[2] < math.ceil(d.axis2.mztoi(highmassX) // 2.) * 2:
+        zoom_safe[2] = math.ceil(d.axis2.mztoi(highmassX) // 2.) * 2
+    if zoom_safe[3] > math.ceil(d.axis2.mztoi(lowmassX) // 2.) *2:
+        zoom_safe[3] = math.ceil(d.axis2.mztoi(lowmassX) // 2.) *2 + 2
+    print("*** Currently analyzed zone: ",zoom_safe," in points, i.e. ",zoom_mz_safe," in m/z. ***")
+    return(zoom_safe, zoom_mz_safe)
+
+def StoreResults(d, prefix):
+    """
+    Used to store results of deconvolution in d.full_pks and in a file containing the list of all deconvoluted peaks.
+    d is a spike NPK Data returned by complete_deconv (should contain d.pks, the results of deconvolution).
+    prefix should be a string of your choice.
+    Modifies d, and create a file: "<prefix>_DeconvResults/full_deconv_pks_list.txt".
+    A Jupyter Notebook exists and can be used to interprete this file and display the results of deconvolution graphically.
+    """
     d.full_pks = {}
     for z1 in d.axeZ1:
         for z2 in d.axeZ2:
@@ -350,6 +324,73 @@ def complete_deconv(d, prefix="TEST",lowmassX=300, lowmassY=400, highmassX=1200,
                         d.full_pks["pks_{0}{1}_widthF2".format(z1,z2)].append(e)
     with open('{0}_DeconvResults/full_deconv_pks_list.txt'.format(prefix), 'w') as outfile:  
         json.dump(d.full_pks, outfile)
+
+def complete_deconv(d, prefix="TEST",lowmassX=300, lowmassY=400, highmassX=1200, highmassY=700, iterations=100, axeZ1=[1,2],axeZ2=[1,2],dm1_m2=3.4E-6,dm2_m2=1.0E-7, save=True,noisefactor=0.9, NX=1.5*1024, NY=256):
+    """
+    To analyze in 'one time' all pieces of the spectrum in the indicated zone.
+    d is the imported data-set.
+    lowmassX=lowmassX, lowmassY=lowmassY, highmassX=highmassX, highmassY=highmassY are 4 coordinates to limit the part to analyze in the full spectrum.
+    create chunks, determine widths and loop analysis() over chunks.
+    if save is True, store the resulting analysis in a hdf5 file, else it does not save anything.
+    """
+    d.pks={}
+    d.axeZ1 = axeZ1
+    d.axeZ2 = axeZ2
+    dirName = "{0}_DeconvResults".format(prefix)
+    if not os.path.exists(dirName):
+        os.mkdir(dirName)
+    Tabl = pieceofdata(d, NX=NX, NY=NY, lowmassX=lowmassX, lowmassY=lowmassY, highmassX=highmassX, highmassY=highmassY)
+    for N in range(0,len(Tabl)):
+        print("***Chunk ", N+1," over ",len(Tabl),"***")
+        dec.memoize_clear()
+        zoom = Tabl[N]
+        k = 2 #size of the safety border to add to each zoom part, in m/z
+        zoom_safe,zoom_mz_safe = safezoom(zoom,k,lowmassX,lowmassY,highmassX,highmassY)
+    # ATTENTION - A FAIRE: definir Z1 et Z2 pour etre sur que parent > fragment
+        #d.unit='points'
+        #S = analysis(d, zoom_safe, iterations=iterations, axeZ1=d.axeZ1, axeZ2=d.axeZ2, width1=width1,width2=width2,noisefactor=noisefactor)
+        dec.memoize_clear()
+        d.unit = 'points'
+        ssi,AxeM1,AxeM2 = prepare(d, zoom_safe)
+        print(zoom_safe)
+        
+        # From here: parallelize
+        N1=len(AxeM1)
+        N2=len(AxeM2)
+        dec.AX1 = AxeM1
+        dec.AX2 = AxeM2                                       
+        S = ia.isotopic_analysis2D(AxeM1, AxeM2, ssi)    
+        S.axeZ1 = d.axeZ1 # list of z-values to analyze
+        S.axeZ2 = d.axeZ2  # list of z-values to analyze
+        S.width1 = width1
+        S.width2 = width2
+        S.nbiter = iterations
+        S.noisefactor = noisefactor
+        S.computeKhi2 = False 
+        S.solve()
+        S.zone = zone
+        del ssi
+        print("Noise: ", S.noise, "Offset:", S.offset, "Khi2:", S.Khi2)
+        if save:
+            fname = "{0}_DeconvResults/_{1}_{2}_{3}_{4}.h5".format(prefix,*zoom_safe) #Allows to store each of the deconvolution results in compressed HDF5 files.
+            store(fname, S.result)
+        thresh = S.result.max()/100.0 #Definition of the detection threshold - Maybe to optimize. 
+        for z1 in S.axeZ1: #Loop over the Z values. (Z values being the charges of ions)
+            for z2 in S.axeZ2:
+                listpkF1, listpkF2, listint = pp(S,z1-1,z2-1,threshold = thresh)
+                print("*** Z1, Z2, Nb peaks: ",z1-1,z2-1,len(listpkF1),"***")
+                listpkF1bis,listpkF2bis,listintbis,widthF1,widthF2 = centroid2D_OnDeconvoluted(S,z1-1,z2-1,listpkF1, listpkF2, listint)
+                d.pks["Peaks_Zone{0}{1}{2}{3}_Z1{4}_Z2{5}".format(*zoom_safe,z1,z2)]=[listpkF1,
+                                                                                    listpkF2,
+                                                                                    listint,
+                                                                                    [ d.axis1.itomz(p) for p in listpkF1bis], #Convert and store coordinates in mass
+                                                                                    [ d.axis2.itomz(p) for p in listpkF2bis],
+                                                                                    listintbis, #Store intensities
+                                                                                    widthF1, #width values are stored to get an information on precision.
+                                                                                    widthF2] 
+        # Here: end of parallelization
+
+    StoreResults(d,prefix) #store results in d and file containing list of all deconvoluted peaks
     dec.memoize_clear()
     return 
 
@@ -465,13 +506,31 @@ def pp_and_center(S):
 
 
 if __name__ == '__main__':
-    dec.memoize_clear()
-    data_name = "yeast_extract_p9kk_dn200_small_mr.msh5"
-    d = FTICR.FTICRData(name=data_name, mode="onfile")
-    #d._absmax = 76601098.15623298
-    start = time.time()
-    complete_deconv(d, prefix="YeastExtract_20190510_1024x256test",lowmassX=300, lowmassY=400, highmassX=1200, highmassY=700, 
-        iterations=100, axeZ1=[1,2],axeZ2=[1,2],dm1_m2=3.4E-6,dm2_m2=1.0E-7, save=True,noisefactor=0.9, NX=1024, NY=256)
-    end = time.time()
-    dec.memoize_clear()
-    print("Wall time: ", end-start)
+    if mpiutil.MPI_size < 2:
+        dec.memoize_clear()
+        data_name = "/home/laura/DeconvolutionMS/DATA/BSA_2_sane200_mr.msh5"
+        d = FTICR.FTICRData(name=data_name, mode="onfile")
+        #d._absmax = 76601098.15623298
+        start = time.time()
+        prefix="BSA2_sane200_20200114_3072x256"
+        lowmassX=150
+        lowmassY=300
+        highmassX=1200
+        highmassY=1200
+        iterations=100
+        axeZ1=[1,2]
+        axeZ2=[1,2]
+        dm1_m2=3.4E-6
+        dm2_m2=1.0E-7
+        save=True
+        noisefactor=1.0
+        NX=3072
+        NY=256
+
+        end = time.time()
+        dec.memoize_clear()
+        print("Wall time: ", end-start)
+    else:
+        if mpiutil.MPI_rank == 0:
+
+        else:
